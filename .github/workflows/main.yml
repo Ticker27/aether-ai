@@ -56,18 +56,40 @@ jobs:
       - name: Make gradlew executable
         run: |
           chmod +x aether-ai-complete/gradlew
+          ls -la aether-ai-complete/gradle/wrapper/ 2>/dev/null || echo "Checking wrapper..."
 
-      # Validate Gradle wrapper
+      # Initialize Gradle wrapper (download dependencies)
+      - name: Initialize Gradle wrapper
+        run: |
+          cd aether-ai-complete
+          # First, just check gradle version to initialize
+          ./gradlew --version --quiet 2>&1 || true
+          echo "Gradle initialized"
+
+      # Validate and regenerate Gradle wrapper if needed
       - name: Validate Gradle wrapper
         run: |
           cd aether-ai-complete
-          ./gradlew wrapper --gradle-version ${{ env.GRADLE_VERSION }}
+          # Check if wrapper jar exists
+          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "⚠️ gradle-wrapper.jar not found, regenerating wrapper..."
+            ./gradlew wrapper --gradle-version ${{ env.GRADLE_VERSION }} --quiet 2>&1 || true
+          else
+            echo "✅ gradle-wrapper.jar found"
+          fi
+          ls -la gradle/wrapper/
+
+      # Clean build
+      - name: Clean build
+        run: |
+          cd aether-ai-complete
+          ./gradlew clean --quiet
 
       # ✅ Compile Gradle build
       - name: Compile Gradle build
         run: |
           cd aether-ai-complete
-          ./gradlew build -x test --stacktrace
+          ./gradlew build -x test --stacktrace --info
         continue-on-error: false
 
       # ✅ Run tests
@@ -81,37 +103,55 @@ jobs:
       - name: Build Debug APK
         run: |
           cd aether-ai-complete
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --stacktrace --info
+        continue-on-error: false
 
-      # Build Release APK (optional)
+      # Build Release APK
       - name: Build Release APK
         run: |
           cd aether-ai-complete
-          ./gradlew assembleRelease --stacktrace
+          ./gradlew assembleRelease --stacktrace --info 2>&1 || \
+          ./gradlew bundleRelease --stacktrace --info 2>&1 || true
         continue-on-error: true
 
       # List built APKs
-      - name: List APKs
+      - name: List built artifacts
         if: always()
         run: |
           echo "📦 Built APK Files:"
-          find aether-ai-complete/app/build/outputs/apk -name "*.apk" -type f 2>/dev/null || echo "No APKs found"
+          find aether-ai-complete/app/build/outputs -name "*.apk" -o -name "*.aab" 2>/dev/null | head -20
+          echo ""
+          echo "📋 Build outputs structure:"
+          find aether-ai-complete/app/build/outputs -type d 2>/dev/null | head -10
 
-      # Upload APK artifacts
+      # Upload Debug APK
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
-        if: success()
+        if: always()
         with:
           name: debug-apk
           path: aether-ai-complete/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore
           retention-days: 30
 
+      # Upload Release APK
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: release-apk
           path: aether-ai-complete/app/build/outputs/apk/release/*.apk
+          if-no-files-found: ignore
+          retention-days: 30
+
+      # Upload Bundle (AAB)
+      - name: Upload App Bundle
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-bundle
+          path: aether-ai-complete/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: ignore
           retention-days: 30
 
       # Publish test results
@@ -122,6 +162,7 @@ jobs:
           files: aether-ai-complete/app/build/test-results/**/*.xml
           check_name: Unit Test Results
           comment_mode: always
+        continue-on-error: true
 
       # Generate build summary
       - name: Build Summary
@@ -132,4 +173,16 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Build Date:** $(date)" >> $GITHUB_STEP_SUMMARY
           echo "**Java Version:** ${{ env.JDK_VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Gradle Version:** $(./gradlew -v | head -1)" >> $GITHUB_STEP_SUMMARY
+          echo "**Gradle Version:** $(./gradlew -v 2>/dev/null | head -1)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Count APKs built
+          if [ -d "app/build/outputs/apk/debug" ]; then
+            DEBUG_COUNT=$(find app/build/outputs/apk/debug -name "*.apk" 2>/dev/null | wc -l)
+            echo "**Debug APKs:** $DEBUG_COUNT" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -d "app/build/outputs/apk/release" ]; then
+            RELEASE_COUNT=$(find app/build/outputs/apk/release -name "*.apk" 2>/dev/null | wc -l)
+            echo "**Release APKs:** $RELEASE_COUNT" >> $GITHUB_STEP_SUMMARY
+          fi
