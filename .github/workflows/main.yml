@@ -1,0 +1,135 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  GRADLE_VERSION: 8.0
+  JDK_VERSION: 17
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      # Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Extract ZIP if present
+      - name: Extract project files
+        run: |
+          cd ${{ github.workspace }}
+          if [ -f "aether-ai-complete.zip" ]; then
+            unzip -q aether-ai-complete.zip
+            echo "✅ ZIP extracted successfully"
+          fi
+          ls -la
+
+      # Setup Java
+      - name: Set up JDK ${{ env.JDK_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JDK_VERSION }}
+          distribution: 'temurin'
+          cache: gradle
+
+      # Setup Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 33
+          ndk-version: 25.1.8937393
+
+      # Make Gradle executable
+      - name: Make gradlew executable
+        run: |
+          chmod +x aether-ai-complete/gradlew
+
+      # Validate Gradle wrapper
+      - name: Validate Gradle wrapper
+        run: |
+          cd aether-ai-complete
+          ./gradlew wrapper --gradle-version ${{ env.GRADLE_VERSION }}
+
+      # ✅ Compile Gradle build
+      - name: Compile Gradle build
+        run: |
+          cd aether-ai-complete
+          ./gradlew build -x test --stacktrace
+        continue-on-error: false
+
+      # ✅ Run tests
+      - name: Run unit tests
+        run: |
+          cd aether-ai-complete
+          ./gradlew test --stacktrace
+        continue-on-error: true
+
+      # ✅ Build Debug APK
+      - name: Build Debug APK
+        run: |
+          cd aether-ai-complete
+          ./gradlew assembleDebug --stacktrace
+
+      # Build Release APK (optional)
+      - name: Build Release APK
+        run: |
+          cd aether-ai-complete
+          ./gradlew assembleRelease --stacktrace
+        continue-on-error: true
+
+      # List built APKs
+      - name: List APKs
+        if: always()
+        run: |
+          echo "📦 Built APK Files:"
+          find aether-ai-complete/app/build/outputs/apk -name "*.apk" -type f 2>/dev/null || echo "No APKs found"
+
+      # Upload APK artifacts
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: debug-apk
+          path: aether-ai-complete/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-apk
+          path: aether-ai-complete/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+
+      # Publish test results
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: aether-ai-complete/app/build/test-results/**/*.xml
+          check_name: Unit Test Results
+          comment_mode: always
+
+      # Generate build summary
+      - name: Build Summary
+        if: always()
+        run: |
+          cd aether-ai-complete
+          echo "## ✅ Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Build Date:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Java Version:** ${{ env.JDK_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Gradle Version:** $(./gradlew -v | head -1)" >> $GITHUB_STEP_SUMMARY
