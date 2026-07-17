@@ -8,3 +8,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # externalNativeBuild and loaded from Dart via DynamicLibrary.open().
 add_library(aether SHARED
     src/aether_engine.cpp)
+
+# Header lives in include/ (separate from src/).
+target_include_directories(aether PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
