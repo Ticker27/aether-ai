@@ -52,9 +52,9 @@ jobs:
             echo "sdk.dir=$ANDROID_HOME" >> local.properties
           fi
           if [ ! -f gradlew ]; then
-            curl -sL https://services.gradle.org/distributions/gradle-8.7-bin.zip -o /tmp/g.zip
+            curl -sL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/g.zip
             unzip -q /tmp/g.zip -d /opt
-            /opt/gradle-8.7/bin/gradle wrapper --gradle-version 8.7
+            /opt/gradle-8.9/bin/gradle wrapper --gradle-version 8.9
           fi
 
       - name: Build Debug APK
