@@ -179,4 +179,42 @@ int32_t aether_self_integrity() {
     return 0;
 }
 
+// --- Game-memory scanner (the heart) --------------------------------------
+// Pointer-chain resolution: the de-facto way to reach a dynamic game value
+// whose base shifts every launch. Fluid (O(depth) reads) + traceless
+// (process_vm only, no /proc traces, no file artifacts) + flexible (any game).
+int64_t aether_resolve_chain(int64_t base, const int64_t* offsets, int32_t count) {
+    if (g_target_pid <= 0 || offsets == nullptr || count <= 0) return 0;
+    int64_t cur = base;
+    for (int32_t i = 0; i < count; ++i) {
+        if (cur <= 0) return 0;
+        int64_t next = 0;
+        struct iovec local  = { &next, sizeof(next) };
+        struct iovec remote = { (void*)(uintptr_t)cur, sizeof(next) };
+        long r = sys_process_vm_readv((pid_t)g_target_pid, &local, 1, &remote, 1, 0);
+        if (r != (long)sizeof(next)) return 0;           // unreadable link -> dead
+        cur = next + offsets[i];
+    }
+    return cur;
+}
+
+int32_t aether_read_i32(int64_t addr) {
+    int32_t v = 0;
+    return aether_vm_read(addr, &v, sizeof(v)) == (int64_t)sizeof(v) ? v : 0;
+}
+int64_t aether_read_i64(int64_t addr) {
+    int64_t v = 0;
+    return aether_vm_read(addr, &v, sizeof(v)) == (int64_t)sizeof(v) ? v : 0;
+}
+float aether_read_f32(int64_t addr) {
+    float v = 0;
+    return aether_vm_read(addr, &v, sizeof(v)) == (int64_t)sizeof(v) ? v : 0;
+}
+int32_t aether_write_i32(int64_t addr, int32_t value) {
+    return aether_vm_write(addr, &value, sizeof(value)) == (int64_t)sizeof(value) ? 0 : -1;
+}
+int32_t aether_write_f32(int64_t addr, float value) {
+    return aether_vm_write(addr, &value, sizeof(value)) == (int64_t)sizeof(value) ? 0 : -1;
+}
+
 }  // extern "C"

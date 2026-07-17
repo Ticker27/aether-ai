@@ -41,6 +41,19 @@ int64_t aether_vm_write(int64_t remote_addr, const void* in_buf, int64_t len);
 // Detects code patching / frida injection. Returns 0 = clean, <0 = tampered.
 int32_t aether_self_integrity();
 
+// --- Game-memory scanner (the heart: fluid / traceless / flexible) --------
+// Resolve a pointer chain: out = *(*(base + off[0]) + off[1]) ... + off[n-1].
+// The standard technique for reaching dynamic game values (HP/score/aim).
+// Returns the final address, or 0 on failure. (traceless: process_vm only)
+int64_t aether_resolve_chain(int64_t base, const int64_t* offsets, int32_t count);
+
+// Typed game-value access (all via process_vm - no file artifacts).
+int32_t aether_read_i32(int64_t addr);
+int64_t aether_read_i64(int64_t addr);
+float   aether_read_f32(int64_t addr);
+int32_t aether_write_i32(int64_t addr, int32_t value);
+int32_t aether_write_f32(int64_t addr, float value);
+
 #ifdef __cplusplus
 }
 #endif
