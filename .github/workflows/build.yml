@@ -45,6 +45,12 @@ jobs:
       - name: Ensure gradle wrapper (android/)
         working-directory: android
         run: |
+          # settings.gradle reads local.properties for flutterSdkPath; ensure it
+          # exists so `gradle wrapper` can evaluate before `flutter build` regenerates it.
+          if [ ! -f local.properties ]; then
+            echo "flutter.sdk=$FLUTTER_ROOT" > local.properties
+            echo "sdk.dir=$ANDROID_HOME" >> local.properties
+          fi
           if [ ! -f gradlew ]; then
             curl -sL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/g.zip
             unzip -q /tmp/g.zip -d /opt
