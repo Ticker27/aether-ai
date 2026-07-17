@@ -1,6 +1,6 @@
 plugins {
-    id "com.android.application" version "8.7.0"
-    id "org.jetbrains.kotlin.android" version "1.9.24"
+    id "com.android.application"
+    id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -12,17 +12,18 @@ if (localPropertiesFile.exists()) {
     }
 }
 
+// Fallback for CI when local.properties doesn't have flutter version
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
 def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
 
 android {
-    namespace "com.aether"
-    compileSdkVersion flutter.compileSdkVersion
-    ndkVersion "26.1.10909125"
+    namespace = "com.aether"
+    compileSdk = 35
+    ndkVersion = "26.1.10909125"
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
@@ -34,13 +35,12 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.aether"
-        minSdkVersion 26
-        targetSdkVersion flutter.targetSdkVersion
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
-        // Aether engine is AArch64 by design (direct svc 0 syscall) — restrict
-        // to arm64-v8a so the AArch64 inline asm never hits a 32-bit build.
+        applicationId = "com.aether"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = flutterVersionCode.toInteger()
+        versionName = flutterVersionName
+        // Aether engine is AArch64 by design (direct svc 0 syscall)
         ndk {
             abiFilters 'arm64-v8a'
         }
@@ -48,25 +48,25 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
-            minifyEnabled false
-            shrinkResources false
+            signingConfig = signingConfigs.debug
+            minifyEnabled = false
+            shrinkResources = false
         }
         debug {
-            signingConfig signingConfigs.debug
+            signingConfig = signingConfigs.debug
         }
     }
 
     // Build the C++ BRAIN (libaether.so) and bundle it into the APK.
     externalNativeBuild {
         cmake {
-            path "../../native/CMakeLists.txt"
+            path = file("../../native/CMakeLists.txt")
         }
     }
 }
 
 flutter {
-    source '../..'
+    source = '../..'
 }
 
 dependencies {}

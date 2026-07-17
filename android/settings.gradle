@@ -1,10 +1,20 @@
 pluginManagement {
     def flutterSdkPath = {
         def properties = new Properties()
-        file("local.properties").withInputStream { properties.load(it) }
+        def localPropertiesFile = file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.withInputStream { properties.load(it) }
+        }
+        // CI fallback: use FLUTTER_ROOT env var
         def flutterSdkPath = properties.getProperty("flutter.sdk")
         if (flutterSdkPath == null) {
-            throw new GradleException("flutter.sdk not set in local.properties")
+            flutterSdkPath = System.getenv("FLUTTER_ROOT")
+        }
+        if (flutterSdkPath == null) {
+            flutterSdkPath = System.getenv("FLUTTER_HOME")
+        }
+        if (flutterSdkPath == null) {
+            throw new GradleException("flutter.sdk not set. Please set FLUTTER_ROOT or add flutter.sdk to local.properties")
         }
         return flutterSdkPath
     }()
@@ -18,6 +28,8 @@ pluginManagement {
 
 plugins {
     id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+    id "com.android.application" version "8.5.0" apply false
+    id "org.jetbrains.kotlin.android" version "1.9.24" apply false
 }
 
 include ":app"
