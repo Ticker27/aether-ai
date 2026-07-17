@@ -8,19 +8,6 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-    inputs:
-      patch_name:
-        description: 'Patch file name'
-        required: false
-        default: ''
-      patch_b64:
-        description: 'Patch content (base64)'
-        required: false
-        default: ''
-      triggered_by:
-        description: 'Who triggered'
-        required: false
-        default: 'manual'
 
 jobs:
   build-android:
@@ -44,10 +31,12 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Export Flutter path
+      - name: Resolve Flutter SDK path
         run: |
-          echo "FLUTTER_ROOT=${{ steps.setup-flutter.outputs.path }}" >> $GITHUB_ENV
-          echo "flutter.sdk=${{ steps.setup-flutter.outputs.path }}" >> $GITHUB_ENV
+          FLUTTER_BIN=$(which flutter)
+          export FLUTTER_ROOT=$(cd "$(dirname "$FLUTTER_BIN")/.." && pwd)
+          echo "FLUTTER_ROOT=$FLUTTER_ROOT" >> "$GITHUB_ENV"
+          echo "Resolved FLUTTER_ROOT=$FLUTTER_ROOT"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -57,7 +46,7 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "ndk;26.1.10909125" "cmake;3.22.1"
 
-      - name: Create local.properties
+      - name: Create local.properties (flutter.sdk + sdk.dir)
         run: |
           mkdir -p android
           echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
@@ -77,13 +66,6 @@ jobs:
 
       - name: Get Flutter dependencies
         run: flutter pub get
-
-      - name: Apply Patch (if provided)
-        if: github.event.inputs.patch_b64 != ''
-        run: |
-          echo "[PATCH] Applying patch: ${{ github.event.inputs.patch_name }}"
-          echo "${{ github.event.inputs.patch_b64 }}" | base64 -d > /tmp/patch.zip
-          python3 tools/patch_engine/patch.py /tmp/patch.zip --repo-root . --token ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Debug APK
         run: flutter build apk --debug
