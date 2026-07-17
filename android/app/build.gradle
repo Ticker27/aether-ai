@@ -39,8 +39,10 @@ android {
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        // Aether engine is AArch64 by design (direct svc 0 syscall) — restrict
+        // to arm64-v8a so the AArch64 inline asm never hits a 32-bit build.
         ndk {
-            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+            abiFilters 'arm64-v8a'
         }
     }
 
