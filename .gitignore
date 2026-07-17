@@ -1,39 +1,33 @@
-# Built application files
-*.apk
-*.aar
-*.ap_
-*.aab
-
-# Files for the ART/Dalvik VM
-*.dex
-
-# Java class files
-*.class
-
-# Generated files
-bin/
-gen/
-out/
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
 build/
-app/build/
-.externalNativeBuild/
-.cxx/
+*.lock
 
-# Gradle
-.gradle/
-gradle-wrapper.jar
-
-# Local configuration
-local.properties
-keystore.jks
-key.properties
+# Android
+android/app/keystore.jks
+android/key.properties
 *.keystore
+*.jks
+.gradle/
+local.properties
+android/.gradle/
+android/local.properties
+android/gradle/wrapper/gradle-wrapper.jar
 
 # IDE
-*.iml
 .idea/
 .vscode/
-.DS_Store
+*.iml
+*.ipr
+*.iws
 
 # OS
+.DS_Store
 Thumbs.db
+
+# Native build artifacts
+android/app/src/main/jniLibs/

@@ -4,8 +4,7 @@ project(aether_engine CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Produces libaether.so (the brain), bundled into the APK by Flutter's
+# externalNativeBuild and loaded from Dart via DynamicLibrary.open().
 add_library(aether SHARED
     src/aether_engine.cpp)
-
-find_library(log-lib log)
-target_link_libraries(aether ${log-lib})
