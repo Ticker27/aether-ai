@@ -1,0 +1,43 @@
+# Aether dynamic DNA — versioned metadata for the target game.
+# The native engine reads ONLY this file (AT REPLACEMENT TIME) to learn
+# which pointers/chains to walk. The .so never bundles offsets; game-update
+# => ship this file (a few hundred bytes), NOT a new APK.
+#
+# The UI never touches this — it's the engine's handbook, replaced via OTA
+# (see scripts/ota_push.sh). The scanner reads, evaluates, and discards.
+#
+# Fields:
+#   "game"          : target package
+#   "version_ok"    : list of 8BP versions this DNA handles (compat)
+#   "aim"           : pointer-chain (base_module, offsets[]) for aim angle
+#   "telemetry_only": true → engine reads ONCE per round to confirm path,
+#                      then discards. Anti-detection: never probe on tick.
+
+{
+  "game": "com.miniclip.eightballpool",
+  "version_ok": ["56.27.0", "56.28.0", "56.29.0"],
+  "telemetry_only": true,
+  "read_poll_ms": 800,
+
+  "chains": {
+    "aim_angle": {
+      "base_module": "libil2cpp.so",
+      "offsets_hex": ["0x18", "0x4A0", "0x130", "0x18"],
+      "read_as": "f32"
+    },
+    "cue_angle": {
+      "base_module": "libil2cpp.so",
+      "offsets_hex": ["0x18", "0x4A8", "0x80"],
+      "read_as": "f32"
+    },
+    "ball_table_base": {
+      "base_module": "libgame-BPM-GooglePlay-Gold-Release-Module-3965.so",
+      "offsets_hex": ["0x10", "0x88"],
+      "read_as": "i64"
+    }
+  },
+
+  "bootstrap": {
+    "sha256_placeholder_for_ota": "<filled at OTA push, never bundled>"
+  }
+}
